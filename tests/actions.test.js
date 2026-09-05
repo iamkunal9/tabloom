@@ -62,15 +62,17 @@ test('upload targets a visible file input and sets only the requested file', asy
     sendCommand: async (_target, method, params) => {
       calls.push([method, params]);
       if (method === 'Page.getFrameTree') return frameTree('first');
-      if (method === 'Runtime.evaluate') return { result: { objectId: 'file-input' } };
+      if (method === 'DOM.getDocument') return { root: { nodeId: 7 } };
+      if (method === 'DOM.querySelector') return { nodeId: 8 };
+      if (method === 'DOM.describeNode') return { node: { nodeName: 'INPUT', attributes: ['type', 'file'] } };
       return {};
     },
   } });
   await executor.execute('upload', { tabId: 1, selector: '#file', path: 'C:\\Temp\\proof.mjs' });
   assert.deepEqual(calls.filter(([method]) => method !== 'Page.getFrameTree').map(([method]) => method), [
-    'Runtime.evaluate', 'DOM.setFileInputFiles', 'Runtime.releaseObject',
+    'DOM.getDocument', 'DOM.querySelector', 'DOM.describeNode', 'DOM.setFileInputFiles',
   ]);
-  assert.deepEqual(calls.find(([method]) => method === 'DOM.setFileInputFiles')[1], { objectId: 'file-input', files: ['C:\\Temp\\proof.mjs'] });
+  assert.deepEqual(calls.find(([method]) => method === 'DOM.setFileInputFiles')[1], { nodeId: 8, files: ['C:\\Temp\\proof.mjs'] });
 });
 
 test('denies tab actions outside the active grant before debugger attachment', async () => {
