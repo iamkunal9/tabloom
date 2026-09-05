@@ -49,6 +49,8 @@ Screenshots and browser profiles belong under ignored artifact or temporary dire
 
 The initial release was exercised on macOS with Node 24 and headed Chromium 153.0.8010.12. Browser actions traveled through the real bridge and extension; the suite exercised CLI calls and an MCP stdio client, including tab-list arrays and page snapshots.
 
+The final clean-install run passed **55 Node tests and the complete headed browser scenario**, with no failed or skipped tests. Dependency installation reported zero known vulnerabilities. Chrome cancellation and mid-action navigation races use deterministic protocol-level tests; the browser scenario verifies normal navigation and scope changes, plus actual rejection of invalid typing targets.
+
 An independent agent also used the installed skill from `/tmp` against the approved local playground. It entered `Tabloom works`, submitted the form, incremented the counter once, and observed `Hello, Tabloom works!` and `Count: 1`. The installed helper resolved the checkout correctly outside its working directory.
 
 Source review and browser tests caught defects in input focus, Enter dispatch, pending approval revocation, shadow selectors, grant cleanup, malformed authentication, MCP result shape, bridge queuing, and executable symlink handling. Regression tests cover the corrected behavior. The CI workflow repeats the automated checks on Linux; local evidence alone does not establish a Linux CI result.
