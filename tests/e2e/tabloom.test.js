@@ -88,17 +88,19 @@ test('headed Chromium honors UI grants across CLI, MCP, disconnect, and restart'
   await first.goto(fixture.url);
   const second = await context.newPage();
   await second.goto(`${fixture.url}/?second=1`);
-  await first.bringToFront();
-  await first.waitForTimeout(200);
   let popup = await openPopup(context, id);
   await pair(popup, port, token);
+  await first.bringToFront();
+  await first.waitForTimeout(200);
+  await popup.bringToFront();
   await popup.locator('#current').click();
-  await popup.waitForFunction(() => /^Tab \d+$/.test(document.querySelector('#scope')?.textContent || ''));
+  await assertText(popup, '#scope', 'Current tab');
 
   const allowedTabs = await cli('tabs', {}, configDir);
   assert.equal(allowedTabs.length, 1);
   const firstId = allowedTabs[0].id;
   assert.equal(allowedTabs[0].url, `${fixture.url}/`);
+  assert.deepEqual(await cli('status', {}, configDir), { mode: 'tab', tabId: firstId, connected: true });
   const snap = await cli('snapshot', { tabId: firstId }, configDir);
   assert.match(snap.text, /Your browser, on your terms/);
   const shadowInput = snap.elements.find(item => item.text === '' && item.selector.includes('#shadow-input'));
@@ -168,7 +170,7 @@ test('headed Chromium honors UI grants across CLI, MCP, disconnect, and restart'
   await first.waitForTimeout(200);
   await popup.bringToFront();
   await popup.locator('#current').click();
-  await assertText(popup, '#scope', `Tab ${firstId}`);
+  await assertText(popup, '#scope', 'Current tab');
   await expectCliDenied('snapshot', { tabId: secondTabId }, configDir);
   assert.equal((await cli('snapshot', { tabId: firstId }, configDir)).title, 'Tabloom playground');
 

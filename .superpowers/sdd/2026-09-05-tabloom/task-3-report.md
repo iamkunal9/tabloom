@@ -18,7 +18,7 @@ The passing suite verifies:
 - Closing the bridge changes the popup to Disconnected and revokes the grant. Starting the bridge again and pairing through the popup reconnects with scope still Off.
 - Closing and relaunching Chromium with the same persistent profile retains pairing configuration but does not restore a grant. Pairing/reconnecting after restart remains Off and page access is denied.
 
-The test writes ignored evidence to `artifacts/e2e-popup.png`, `artifacts/e2e-target.png`, and `artifacts/e2e-result.json`. The latest record identifies Chromium `153.0.8010.12` and the popup screenshot is cropped to its 400 by 619 pixel application surface.
+The test writes ignored evidence to `artifacts/e2e-popup.png`, `artifacts/e2e-target.png`, and `artifacts/e2e-result.json`. The latest record identifies Chromium `153.0.8010.12` and the popup screenshot is cropped to its 400 by 588 pixel application surface.
 
 ## Defect found during the first browser run
 
@@ -36,7 +36,7 @@ The demo reads the default Tabloom config and creates it when absent, starts the
 
 ## Verification
 
-- `npm run test:e2e`: 1 passed, 0 failed in 10.8 seconds on the final headed run.
+- `npm run test:e2e`: 1 passed, 0 failed in 9.8 seconds on the final headed run.
 - `npm run demo` with a fresh temporary config: reached `Tabloom demo is ready ...`; stopped cleanly with Ctrl+C; no pairing token appeared on stdout.
 - `git diff --check`: no whitespace errors.
 
