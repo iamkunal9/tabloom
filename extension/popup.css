@@ -29,3 +29,4 @@ button.secondary { background: #2b2437; border-color: #514761; text-align: cente
 .controls button small { color: #d6c9eb; font-weight: 400; margin-top: 3px; line-height: 1.35; }
 button.danger { margin-top: 3px; text-align: center; background: #392026; border-color: #6d3845; color: #ffb6c4; }
 #error { min-height: 19px; margin: 12px 0 0; color: #ff9fb1; font-size: 12px; }
+#error:empty { display: none; }

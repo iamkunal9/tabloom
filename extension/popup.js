@@ -12,7 +12,8 @@ async function refresh() {
     const state = await request({ type: 'getState' });
     $('#paired').textContent = state.paired ? 'Paired' : 'Not paired';
     $('#connected').textContent = state.connected ? 'Connected' : 'Disconnected';
-    $('#scope').textContent = state.mode === 'tab' ? `Tab ${state.tabId}` : state.mode === 'browser' ? 'Full browser' : 'Off';
+    $('#scope').textContent = state.mode === 'tab' ? 'Current tab' : state.mode === 'browser' ? 'Full browser' : 'Off';
+    $('#scope').title = state.mode === 'tab' ? `Tab ${state.tabId}` : '';
     $('#badge').textContent = state.mode === 'off' ? (state.connected ? 'Ready' : 'Off') : 'Active';
     $('#badge').className = state.mode !== 'off' ? 'active' : state.connected ? 'ready' : '';
     $('#port').value = state.bridgePort || 17653;

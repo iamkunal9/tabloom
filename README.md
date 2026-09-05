@@ -118,6 +118,8 @@ For an agent that accepts `mcpServers` JSON, use an absolute checkout path:
 
 Use an absolute path to the Node executable too if your agent does not inherit your terminal's `PATH`. Start `tabloom serve` separately, then pair and enable scope in the extension. MCP cannot enable control for you.
 
+Tools use the `tabloom_` prefix, for example `tabloom_tabs`, `tabloom_snapshot`, and `tabloom_click`. Screenshot results are MCP image content.
+
 ## Boundaries
 
 Tabloom controls web pages and tabs, not your entire computer. Browser-internal pages and incognito tabs are excluded. Cross-origin iframe targeting is not supported in this version. Some websites have custom controls, browser dialogs, or anti-automation behavior that need manual interaction. Chrome can show a debugging indicator, and opening DevTools can interrupt control.
@@ -134,6 +136,14 @@ npm run test:e2e
 ```
 
 The browser suite uses an isolated Chromium profile with the real extension, local fixture pages, and real bridge commands. Extension-loading flags are used by the automated harness; users load the extension through Chrome's UI. See [test coverage and reproduction](docs/testing.md).
+
+For an interactive local playground:
+
+```sh
+npm run demo
+```
+
+This starts a local bridge and opens a separate Chromium profile with the extension paired to a local fixture. Choose **Current tab** in the extension page, then use the CLI or installed skill. Stop any existing bridge first so the demo can use its port. Close the demo browser or press Ctrl+C to stop it.
 
 ```text
 extension/       Manifest V3 extension and popup
