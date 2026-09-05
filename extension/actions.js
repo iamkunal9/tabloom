@@ -120,7 +120,7 @@ const snapshotExpression = `(() => {
   const localSelector = (element, boundary) => {
     if (element.id) return '#' + CSS.escape(element.id);
     const parts = [];
-    for (let node = element; node && node !== boundary && node.nodeType === 1 && parts.length < 8; node = node.parentElement) {
+    for (let node = element; node && node !== boundary && node.nodeType === 1; node = node.parentElement) {
       let part = node.localName;
       const siblings = node.parentNode?.children ? [...node.parentNode.children].filter(item => item.localName === node.localName) : [];
       if (siblings.length > 1) part += ':nth-of-type(' + (siblings.indexOf(node) + 1) + ')';

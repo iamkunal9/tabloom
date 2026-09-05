@@ -172,6 +172,32 @@ test('snapshot distinguishes direct sibling controls inside an open shadow root'
   assert.equal(new Set(snapshot.elements.map(element => element.selector)).size, 2);
 });
 
+test('snapshot keeps deeply nested controls uniquely addressable', async () => {
+  const makeButton = () => ({ nodeType: 1, localName: 'button', innerText: 'Go', getRootNode: () => document,
+    getBoundingClientRect: () => ({ width: 20, height: 20 }) });
+  const buttons = [makeButton(), makeButton()];
+  const document = { title: 'Deep', body: { innerText: '' }, querySelectorAll: selector => selector === '*' ? [] : buttons };
+  for (const [index, button] of buttons.entries()) {
+    let parent = button;
+    for (let level = 0; level < 10; level++) {
+      const next = { nodeType: 1, localName: 'div', parentElement: null, parentNode: null };
+      parent.parentElement = next; parent.parentNode = { children: [next] }; parent = next;
+    }
+    parent.parentElement = document;
+    parent.parentNode = { children: buttons.map((_, sibling) => sibling === index ? parent : ({ nodeType: 1, localName: 'div' })) };
+  }
+  const scope = new ScopeGrant(); scope.grantTab(tab(1));
+  class ShadowRoot {}
+  const executor = new ActionExecutor({ scope, tabs: { get: async () => tab(1) }, debuggerApi: {
+    attach: async () => {},
+    sendCommand: async (_target, _method, params) => ({ result: { value: vm.runInNewContext(params.expression, {
+      document, ShadowRoot, CSS: { escape: value => value }, location: { href: 'https://example.test/' }, getComputedStyle: () => ({ display: 'block', visibility: 'visible' }),
+    }) } }),
+  } });
+  const snapshot = await executor.execute('snapshot', { tabId: 1 });
+  assert.equal(new Set(snapshot.elements.map(element => element.selector)).size, 2);
+});
+
 const frameTree = loaderId => ({ frameTree: { frame: { id: 'main', loaderId } } });
 
 for (const method of ['click', 'type']) for (const reload of [false, true]) {
