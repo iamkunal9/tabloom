@@ -10,11 +10,18 @@ body{font:18px system-ui;margin:0;background:#eef3ef;color:#173e32}main{max-widt
 <form id="greeting"><label for="name">Your name</label><input id="name" name="name" placeholder="Type a name" autocomplete="off"><button id="greet" type="submit">Say hello</button></form>
 <p id="result" role="status">Ready for your agent.</p>
 <button id="counter" type="button">Count: 0</button>
+<div id="shadow-host"></div>
 <p><a id="next" href="/next">Visit the next page</a></p>
 <div class="spacer"></div><footer id="bottom">You reached the bottom.</footer>
 </main><script>
 document.querySelector('#greeting').addEventListener('submit',event=>{event.preventDefault();document.querySelector('#result').textContent='Hello, '+document.querySelector('#name').value+'!';});
 let count=0;document.querySelector('#counter').addEventListener('click',event=>{event.target.textContent='Count: '+(++count);});
+const outer=document.querySelector('#shadow-host').attachShadow({mode:'open'});
+outer.innerHTML='<section id="shadow-panel"><label for="shadow-input">Shadow message</label><input id="shadow-input"><button id="shadow-button">Send shadow</button><div id="nested-host"></div><p id="shadow-result">Shadow ready.</p></section>';
+outer.querySelector('#shadow-button').addEventListener('click',()=>{outer.querySelector('#shadow-result').textContent='Shadow: '+outer.querySelector('#shadow-input').value;});
+const nested=outer.querySelector('#nested-host').attachShadow({mode:'open'});
+nested.innerHTML='<button id="nested-button">Nested count: 0</button>';
+let nestedCount=0;nested.querySelector('#nested-button').addEventListener('click',event=>{event.target.textContent='Nested count: '+(++nestedCount);});
 </script></body></html>`;
 
 export async function startFixture() {
