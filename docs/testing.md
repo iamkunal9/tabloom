@@ -44,3 +44,11 @@ The [Playwright extension documentation](https://playwright.dev/docs/chrome-exte
 - **Action timeout:** inspect the page before retrying. A timeout cannot roll back a side effect already dispatched to the browser.
 
 Screenshots and browser profiles belong under ignored artifact or temporary directories. Never attach test output containing pairing tokens or private browsing data to a public issue.
+
+## Local release validation
+
+The initial release was exercised on macOS with Node 24 and headed Chromium 153.0.8010.12. Browser actions traveled through the real bridge and extension; the suite exercised CLI calls and an MCP stdio client, including tab-list arrays and page snapshots.
+
+An independent agent also used the installed skill from `/tmp` against the approved local playground. It entered `Tabloom works`, submitted the form, incremented the counter once, and observed `Hello, Tabloom works!` and `Count: 1`. The installed helper resolved the checkout correctly outside its working directory.
+
+Source review and browser tests caught defects in input focus, Enter dispatch, pending approval revocation, shadow selectors, grant cleanup, malformed authentication, MCP result shape, bridge queuing, and executable symlink handling. Regression tests cover the corrected behavior. The CI workflow repeats the automated checks on Linux; local evidence alone does not establish a Linux CI result.

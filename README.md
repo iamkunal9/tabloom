@@ -6,6 +6,8 @@ Tabloom connects an LLM agent to the browser you already use. Open the extension
 
 No browser restart, remote-debugging port, new daily browser profile, or hosted relay is required. The local bridge must be running. Chrome still requires you to load the extension once.
 
+<img src="docs/images/tabloom.png" alt="Tabloom popup with pairing, connection status, Current tab, Full browser, and Stop controls" width="360">
+
 ```text
 Agent + skill / MCP tools
           │
@@ -20,6 +22,8 @@ Agent + skill / MCP tools
 ## Set up
 
 Requires **Node.js 22+**, **Chrome 125+** (or a compatible Chromium browser), and Git. This repository is private: your GitHub account must have access. The following uses the GitHub CLI, already authenticated with `gh auth login`.
+
+The included shell skill helper targets macOS and Linux. Windows has not been tested.
 
 ```sh
 gh repo clone iamkunal9/tabloom && cd tabloom && npm ci && npm link && tabloom install-skill --agent all
