@@ -2,9 +2,11 @@
   "manifest_version": 3,
   "name": "Tabloom",
   "version": "0.1.0",
+  "minimum_chrome_version": "125",
   "description": "User-approved local browser control for Tabloom.",
   "permissions": ["alarms", "debugger", "storage", "tabs"],
   "host_permissions": ["http://127.0.0.1/*"],
   "background": { "service_worker": "background.js", "type": "module" },
-  "action": { "default_popup": "popup.html", "default_title": "Tabloom" }
+  "icons": { "16": "icons/tabloom-16.png", "32": "icons/tabloom-32.png", "48": "icons/tabloom-48.png", "128": "icons/tabloom-128.png" },
+  "action": { "default_popup": "popup.html", "default_title": "Tabloom", "default_icon": { "16": "icons/tabloom-16.png", "32": "icons/tabloom-32.png" } }
 }

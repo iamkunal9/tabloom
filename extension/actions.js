@@ -243,7 +243,8 @@ export class ActionExecutor {
     }
     if (method === 'press') {
       const key = keyDefinition(params.key);
-      await this.#cdp(current.id, 'Input.dispatchKeyEvent', { type: 'keyDown', ...key }, generation);
+      const character = params.key === 'Enter' ? { text: '\r', unmodifiedText: '\r' } : {};
+      await this.#cdp(current.id, 'Input.dispatchKeyEvent', { type: 'keyDown', ...key, ...character }, generation);
       await this.#cdp(current.id, 'Input.dispatchKeyEvent', { type: 'keyUp', ...key }, generation);
       return {};
     }
