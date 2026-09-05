@@ -109,7 +109,7 @@ const snapshotExpression = `(() => {
     const parts = [];
     for (let node = element; node && node !== boundary && node.nodeType === 1 && parts.length < 8; node = node.parentElement) {
       let part = node.localName;
-      const siblings = node.parentElement ? [...node.parentElement.children].filter(item => item.localName === node.localName) : [];
+      const siblings = node.parentNode?.children ? [...node.parentNode.children].filter(item => item.localName === node.localName) : [];
       if (siblings.length > 1) part += ':nth-of-type(' + (siblings.indexOf(node) + 1) + ')';
       parts.unshift(part);
     }
@@ -140,6 +140,7 @@ export class ActionExecutor {
     this.debugger = debuggerApi;
     this.attached = new Set();
     this._tail = Promise.resolve();
+    this._detaching = Promise.resolve();
     scope.onRevoke(() => this.detachAll());
   }
 
@@ -153,10 +154,12 @@ export class ActionExecutor {
     return run;
   }
 
-  async detachAll() {
+  detachAll() {
     const ids = [...this.attached];
     this.attached.clear();
-    await Promise.allSettled(ids.map(tabId => this.debugger.detach?.({ tabId })));
+    const previous = this._detaching;
+    this._detaching = Promise.allSettled([previous, ...ids.map(tabId => this.debugger.detach?.({ tabId }))]);
+    return this._detaching;
   }
 
   markDetached(tabId) { this.attached.delete(tabId); }
@@ -170,6 +173,8 @@ export class ActionExecutor {
   }
 
   async #attach(id, generation) {
+    await this._detaching;
+    this.scope.assertCurrent(generation);
     if (this.attached.has(id)) return;
     this.scope.assertCurrent(generation);
     await this.debugger.attach({ tabId: id }, '1.3');

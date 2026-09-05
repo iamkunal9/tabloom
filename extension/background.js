@@ -1,4 +1,4 @@
-import { ScopeGrant, isControllableTab } from './scope.js';
+import { ScopeGrant, isControllableTab, resolveCurrentTab } from './scope.js';
 import { ActionExecutor } from './actions.js';
 
 const DEFAULT_PORT = 17653;
@@ -28,6 +28,9 @@ chrome.tabs.onRemoved.addListener(tabId => {
 chrome.debugger.onDetach.addListener(source => executor.markDetached(source.tabId));
 
 function emitState() {
+  const { mode } = scope.status();
+  chrome.action.setBadgeText({ text: mode === 'browser' ? 'ALL' : mode === 'tab' ? 'TAB' : '' });
+  chrome.action.setBadgeBackgroundColor({ color: '#175c48' });
   chrome.runtime.sendMessage({ type: 'stateChanged' }).catch(() => {});
 }
 
@@ -109,15 +112,9 @@ async function handleMessage(ws, raw) {
 
 async function targetTab() {
   const [active] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (isControllableTab(active)) {
-    lastNormalTabId = active.id;
-    return active;
-  }
-  if (lastNormalTabId !== undefined) {
-    const previous = await chrome.tabs.get(lastNormalTabId);
-    if (isControllableTab(previous)) return previous;
-  }
-  throw new Error('Open a normal HTTP(S) tab before enabling Current tab');
+  const tab = await resolveCurrentTab(active, lastNormalTabId, chrome.runtime.getURL('popup.html'), id => chrome.tabs.get(id));
+  lastNormalTabId = tab.id;
+  return tab;
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -137,11 +134,15 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return {};
     }
     if (message?.type === 'grantTab') {
-      return scope.grantSelectedTab(targetTab);
+      const result = await scope.grantSelectedTab(targetTab);
+      emitState();
+      return result;
     }
     if (message?.type === 'grantBrowser') {
       if (!scope.connected) throw new Error('Pair and connect to the bridge first');
-      return scope.grantBrowser();
+      const result = scope.grantBrowser();
+      emitState();
+      return result;
     }
     if (message?.type === 'stop') { scope.revoke(); emitState(); return {}; }
     throw new Error('Unsupported popup request');

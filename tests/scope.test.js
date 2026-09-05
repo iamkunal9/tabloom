@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ScopeGrant } from '../extension/scope.js';
+import { ScopeGrant, resolveCurrentTab } from '../extension/scope.js';
 
 const normal = (id, url = 'https://example.test/') => ({ id, url, incognito: false });
 
@@ -77,4 +77,23 @@ test('an older tab selection cannot overwrite a newer browser grant', async () =
   resolve(normal(7));
   await assert.rejects(enabling, /cancelled/i);
   assert.equal(scope.status().mode, 'browser');
+});
+
+test('replacing a grant notifies debugger cleanup listeners', () => {
+  const scope = new ScopeGrant();
+  let cleanups = 0;
+  scope.onRevoke(() => { cleanups++; });
+  scope.grantBrowser();
+  scope.grantTab(normal(1));
+  assert.equal(cleanups, 1);
+  scope.grantTab(normal(2));
+  assert.equal(cleanups, 2);
+});
+
+test('Current tab never falls back from an internal or incognito tab', async () => {
+  const popup = 'chrome-extension://example/popup.html';
+  const getTab = async () => normal(3);
+  await assert.rejects(resolveCurrentTab(normal(4, 'chrome://settings/'), 3, popup, getTab), /normal HTTP/);
+  await assert.rejects(resolveCurrentTab({ ...normal(4), incognito: true }, 3, popup, getTab), /normal HTTP/);
+  assert.equal((await resolveCurrentTab(normal(4, popup), 3, popup, getTab)).id, 3);
 });

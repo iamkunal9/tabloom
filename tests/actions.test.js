@@ -130,3 +130,26 @@ test('typing focuses and selects the requested input before inserting text', asy
   });
   await executor.execute('type', { tabId: 5, selector: '#name', text: 'Ada' });
 });
+
+test('snapshot distinguishes direct sibling controls inside an open shadow root', async () => {
+  class ShadowRoot {}
+  const root = new ShadowRoot();
+  const document = { title: 'Shadow', body: { innerText: '' }, querySelectorAll: selector => selector === '*' ? [host] : [] };
+  const host = { id: 'host', getRootNode: () => document, shadowRoot: root };
+  root.host = host;
+  const button = () => ({ nodeType: 1, localName: 'button', innerText: 'Go', parentElement: null, parentNode: root,
+    getRootNode: () => root, getBoundingClientRect: () => ({ width: 20, height: 20 }) });
+  root.children = [button(), button()];
+  root.querySelectorAll = () => root.children;
+  const scope = new ScopeGrant();
+  scope.grantTab(tab(1));
+  const executor = new ActionExecutor({ scope, tabs: { get: async () => tab(1) }, debuggerApi: {
+    attach: async () => {},
+    sendCommand: async (_target, _method, params) => ({ result: { value: vm.runInNewContext(params.expression, {
+      document, ShadowRoot, CSS: { escape: value => value }, location: { href: 'https://example.test/' },
+      getComputedStyle: () => ({ display: 'block', visibility: 'visible' }),
+    }) } }),
+  } });
+  const snapshot = await executor.execute('snapshot', { tabId: 1 });
+  assert.equal(new Set(snapshot.elements.map(element => element.selector)).size, 2);
+});

@@ -8,6 +8,15 @@ export function isControllableTab(tab) {
   }
 }
 
+export async function resolveCurrentTab(active, previousId, popupUrl, getTab) {
+  if (isControllableTab(active)) return active;
+  if (active?.url === popupUrl && previousId !== undefined) {
+    const previous = await getTab(previousId);
+    if (isControllableTab(previous)) return previous;
+  }
+  throw new Error('Open a normal HTTP(S) tab before enabling Current tab');
+}
+
 export class ScopeGrant {
   #mode = 'off';
   #tabId;
@@ -34,6 +43,7 @@ export class ScopeGrant {
 
   grantTab(tab) {
     if (!isControllableTab(tab)) throw new Error('This tab cannot be controlled');
+    this.revoke();
     this.#mode = 'tab';
     this.#tabId = tab.id;
     this.#generation++;
@@ -41,6 +51,7 @@ export class ScopeGrant {
   }
 
   grantBrowser() {
+    this.revoke();
     this.#mode = 'browser';
     this.#tabId = undefined;
     this.#generation++;
