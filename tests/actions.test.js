@@ -39,6 +39,20 @@ test('normalizes bounded action inputs without exposing arbitrary CDP', () => {
   assert.deepEqual(keyDefinition('Enter'), { key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 });
 });
 
+test('scroll uses a bounded page scroll command', async () => {
+  const scope = new ScopeGrant(); scope.grantTab(tab(1));
+  const calls = [];
+  const executor = new ActionExecutor({ scope, tabs: { get: async () => tab(1) }, debuggerApi: {
+    attach: async () => {},
+    sendCommand: async (_target, method, params) => { calls.push([method, params]); return {}; },
+  } });
+  await executor.execute('scroll', { tabId: 1, x: 12, y: 34 });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], 'Runtime.evaluate');
+  assert.equal(calls[0][1].returnByValue, true);
+  assert.match(calls[0][1].expression, /scrollBy\(12, 34\)/);
+});
+
 test('denies tab actions outside the active grant before debugger attachment', async () => {
   const scope = new ScopeGrant();
   scope.grantTab(tab(1));

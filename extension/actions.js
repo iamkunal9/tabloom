@@ -273,7 +273,8 @@ export class ActionExecutor {
       return { mimeType: 'image/png', data: result.data };
     }
     if (method === 'scroll') {
-      await this.#cdp(current.id, 'Input.dispatchMouseEvent', { type: 'mouseWheel', x: 0, y: 0, deltaX: params.x, deltaY: params.y }, generation);
+      const expression = `window.scrollBy(${JSON.stringify(params.x)}, ${JSON.stringify(params.y)}); true`;
+      await this.#cdp(current.id, 'Runtime.evaluate', { expression, returnByValue: true, awaitPromise: false }, generation);
       return {};
     }
     if (method === 'press') {
