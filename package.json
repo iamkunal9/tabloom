@@ -1,8 +1,30 @@
 {
   "name": "tabloom",
+  "version": "0.1.0",
+  "description": "Local bridge and agent tools for user-authorized Chrome tab control.",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iamkunal9/tabloom.git"
+  },
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "tabloom": "src/cli.js"
+  },
   "scripts": {
-    "test": "node --test"
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "node --test tests/e2e/*.test.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "ws": "^8.21.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "playwright": "^1.63.0"
   }
 }
