@@ -25,7 +25,10 @@ chrome.tabs.onActivated.addListener(async ({ tabId }) => {
 chrome.tabs.onRemoved.addListener(tabId => {
   if (tabId === lastNormalTabId) lastNormalTabId = undefined;
 });
-chrome.debugger.onDetach.addListener(source => executor.markDetached(source.tabId));
+chrome.debugger.onDetach.addListener((source, reason) => {
+  executor.markDetached(source.tabId, reason);
+  emitState();
+});
 
 function emitState() {
   const { mode } = scope.status();

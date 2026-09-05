@@ -87,8 +87,21 @@ const selectorExpression = (selector, mode) => `(() => {
   });
   if (visible.length !== 1) return { error: visible.length ? 'Selector is not unique' : 'No visible element matches selector' };
   const element = visible[0];
+  ${mode === 'focus' || mode === 'verifyFocus' ? `
+  const textInput = element instanceof HTMLInputElement && ['text', 'search', 'email', 'url', 'tel', 'password'].includes(element.type);
+  const textArea = element instanceof HTMLTextAreaElement;
+  const editable = element instanceof HTMLInputElement ? textInput : textArea || element.isContentEditable;
+  if (!editable || element.matches(':disabled') || element.readOnly) return { error: 'Target is not editable' };
+  const hasFocus = () => {
+    let active = document.activeElement;
+    while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+    return active === element;
+  };
+  ${mode === 'verifyFocus' ? "if (!hasFocus()) return { error: 'Target lost focus' }; return { focused: true };" : ''}
+  ` : ''}
   element.scrollIntoView({ block: 'center', inline: 'center' });
   ${mode === 'focus' ? `element.focus();
+  if (!hasFocus()) return { error: 'Target did not retain focus' };
   if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement) element.select();
   else if (element.isContentEditable) {
     const range = document.createRange();
@@ -162,7 +175,12 @@ export class ActionExecutor {
     return this._detaching;
   }
 
-  markDetached(tabId) { this.attached.delete(tabId); }
+  markDetached(tabId, reason) {
+    // Internal detach clears membership before invoking Chrome, so its event
+    // cannot revoke a replacement grant. Pending attachments are members too.
+    const wasAttached = this.attached.delete(tabId);
+    if (wasAttached && reason === 'canceled_by_user') this.scope.revoke();
+  }
 
   async #tab(id, generation) {
     this.scope.assertCurrent(generation);
@@ -177,30 +195,47 @@ export class ActionExecutor {
     this.scope.assertCurrent(generation);
     if (this.attached.has(id)) return;
     this.scope.assertCurrent(generation);
-    await this.debugger.attach({ tabId: id }, '1.3');
+    this.attached.add(id);
+    let established = false;
     try {
+      await this.debugger.attach({ tabId: id }, '1.3');
+      established = true;
       this.scope.assertCurrent(generation);
       const current = await this.tabs.get(id);
       this.scope.assertCurrent(generation);
       this.scope.assertAllows(current);
       this.attached.add(id);
     } catch (error) {
-      await this.debugger.detach?.({ tabId: id }).catch(() => {});
+      this.attached.delete(id);
+      if (established) await this.debugger.detach?.({ tabId: id }).catch(() => {});
       throw error;
     }
   }
 
-  async #cdp(id, method, params, generation) {
+  async #cdp(id, method, params, generation, document) {
     this.scope.assertCurrent(generation);
     const before = await this.tabs.get(id);
     this.scope.assertCurrent(generation);
     this.scope.assertAllows(before);
+    if (document) await this.#assertDocument(id, generation, document);
     const result = await this.debugger.sendCommand({ tabId: id }, method, params);
     this.scope.assertCurrent(generation);
     const after = await this.tabs.get(id);
     this.scope.assertCurrent(generation);
     this.scope.assertAllows(after);
     return result;
+  }
+
+  async #document(id, generation) {
+    const result = await this.#cdp(id, 'Page.getFrameTree', {}, generation);
+    const frame = result.frameTree?.frame;
+    if (!frame?.id || !frame?.loaderId) throw new Error('Could not identify current document');
+    return { id: frame.id, loaderId: frame.loaderId };
+  }
+
+  async #assertDocument(id, generation, expected) {
+    const current = await this.#document(id, generation);
+    if (current.id !== expected.id || current.loaderId !== expected.loaderId) throw new Error('Document changed during action');
   }
 
   async #run(method, params, generation) {
@@ -252,15 +287,19 @@ export class ActionExecutor {
       const result = await this.#cdp(current.id, 'Runtime.evaluate', { expression: snapshotExpression, returnByValue: true, awaitPromise: false }, generation);
       return result.result?.value;
     }
+    const document = await this.#document(current.id, generation);
     const resolved = await this.#cdp(current.id, 'Runtime.evaluate', { expression: selectorExpression(params.selector, method === 'type' ? 'focus' : 'point'), returnByValue: true, awaitPromise: false }, generation);
     const point = resolved.result?.value;
     if (!point || point.error) throw new Error(point?.error || 'Could not resolve selector');
+    await this.#assertDocument(current.id, generation, document);
     if (method === 'click') {
-      await this.#cdp(current.id, 'Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 }, generation);
-      await this.#cdp(current.id, 'Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 }, generation);
+      await this.#cdp(current.id, 'Input.dispatchMouseEvent', { type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 }, generation, document);
+      await this.#cdp(current.id, 'Input.dispatchMouseEvent', { type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 }, generation, document);
       return {};
     }
-    await this.#cdp(current.id, 'Input.insertText', { text: params.text }, generation);
+    const focused = await this.#cdp(current.id, 'Runtime.evaluate', { expression: selectorExpression(params.selector, 'verifyFocus'), returnByValue: true, awaitPromise: false }, generation, document);
+    if (!focused.result?.value?.focused) throw new Error(focused.result?.value?.error || 'Target lost focus');
+    await this.#cdp(current.id, 'Input.insertText', { text: params.text }, generation, document);
     return {};
   }
 }

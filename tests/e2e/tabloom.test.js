@@ -112,6 +112,19 @@ test('headed Chromium honors UI grants across CLI, MCP, disconnect, and restart'
   await cli('type', { tabId: firstId, selector: '#name', text: 'AdaX' }, configDir);
   await cli('press', { tabId: firstId, key: 'Backspace' }, configDir);
   assert.equal(await first.locator('#name').inputValue(), 'Ada');
+  await first.evaluate(() => {
+    const disabled = document.createElement('input'); disabled.id = 'disabled-target'; disabled.disabled = true;
+    const readonly = document.createElement('textarea'); readonly.id = 'readonly-target'; readonly.readOnly = true;
+    const checkbox = document.createElement('input'); checkbox.id = 'checkbox-target'; checkbox.type = 'checkbox';
+    const redirect = document.createElement('input'); redirect.id = 'redirect-target';
+    redirect.addEventListener('focus', () => document.querySelector('#name').focus());
+    document.body.prepend(disabled, readonly, checkbox, redirect);
+  });
+  for (const selector of ['#counter', '#disabled-target', '#readonly-target', '#checkbox-target', '#redirect-target']) {
+    await expectCliDenied('type', { tabId: firstId, selector, text: 'wrong field' }, configDir, /editable|focus/i);
+    assert.equal(await first.locator('#name').inputValue(), 'Ada');
+  }
+  await cli('type', { tabId: firstId, selector: '#name', text: 'Ada' }, configDir);
   await cli('press', { tabId: firstId, key: 'Enter' }, configDir);
   await assertText(first, '#result', 'Hello, Ada!');
   await cli('click', { tabId: firstId, selector: '#counter' }, configDir);

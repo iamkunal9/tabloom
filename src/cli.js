@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
+import { realpathSync } from 'node:fs';
 import { command } from './client.js';
 import { DEFAULT_PORT, readConfig, writeConfig } from './config.js';
 import { installSkill } from './install-skill.js';
@@ -41,4 +42,8 @@ async function ensureConfig() {
   try { return await readConfig(); }
   catch (error) { if (error?.code !== 'ENOENT') throw error; return writeConfig({ port: parsePort(process.env.TABLOOM_PORT ?? DEFAULT_PORT) }); }
 }
-if (import.meta.url === pathToFileURL(process.argv[1] || '').href) main().catch(error => { console.error(JSON.stringify({ ok: false, error: { code: error.code || 'COMMAND_FAILED', message: error.message } })); process.exitCode = 1; });
+function isEntrypoint() {
+  try { return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href; }
+  catch { return false; }
+}
+if (isEntrypoint()) main().catch(error => { console.error(JSON.stringify({ ok: false, error: { code: error.code || 'COMMAND_FAILED', message: error.message } })); process.exitCode = 1; });
