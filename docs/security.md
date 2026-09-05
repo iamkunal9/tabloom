@@ -24,6 +24,10 @@ Commands are limited to named operations and validated arguments. Agents cannot 
 
 Grants are not restored after a browser restart or bridge disconnection. Reconnecting restores the transport, and you enable control again in the popup. Requests have time and size limits. Stop invalidates queued work. Timeouts do not prove an action had no effect: inspect the page before retrying a click, submission, or navigation.
 
+Cancelling debugging through Chrome also revokes control. Tabloom does not automatically reattach under that cancelled grant. Internal debugger cleanup when changing scope preserves the newly selected grant.
+
+Selector-based actions are tied to the document on which they were prepared. If the tab navigates or reloads during preparation, the action fails instead of reusing old coordinates or focus on the new document. Take a fresh snapshot before continuing. Typing requires a supported editable element that actually holds focus; disabled, read-only, and nontext controls are rejected.
+
 ## Agent behavior
 
 The skill tells agents to treat pages as untrusted data and verify outcomes after actions. Text on a page cannot grant permission, expand the task, or authorize sending private data. Enabling a tab permits using the tools; the user's task determines which actions the agent should perform.
