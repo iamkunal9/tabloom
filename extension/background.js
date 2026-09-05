@@ -137,8 +137,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       return {};
     }
     if (message?.type === 'grantTab') {
-      if (!scope.connected) throw new Error('Pair and connect to the bridge first');
-      return scope.grantTab(await targetTab());
+      return scope.grantSelectedTab(targetTab);
     }
     if (message?.type === 'grantBrowser') {
       if (!scope.connected) throw new Error('Pair and connect to the bridge first');

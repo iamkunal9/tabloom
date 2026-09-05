@@ -52,3 +52,29 @@ test('invalid grant targets are rejected', () => {
   assert.throws(() => scope.grantTab(normal(3, 'chrome-extension://abc/popup.html')), /cannot be controlled/i);
   assert.throws(() => scope.grantTab({ ...normal(4), incognito: true }), /cannot be controlled/i);
 });
+
+test('an enable operation awaiting tab selection cannot undo Stop or disconnection', async () => {
+  for (const interrupt of [scope => scope.revoke(), scope => { scope.setConnected(false); scope.setConnected(true); }]) {
+    const scope = new ScopeGrant();
+    scope.setConnected(true);
+    let resolve;
+    const selection = new Promise(done => { resolve = done; });
+    const enabling = scope.grantSelectedTab(() => selection);
+    interrupt(scope);
+    resolve(normal(7));
+    await assert.rejects(enabling, /cancelled|connect/i);
+    assert.equal(scope.status().mode, 'off');
+  }
+});
+
+test('an older tab selection cannot overwrite a newer browser grant', async () => {
+  const scope = new ScopeGrant();
+  scope.setConnected(true);
+  let resolve;
+  const selection = new Promise(done => { resolve = done; });
+  const enabling = scope.grantSelectedTab(() => selection);
+  scope.grantBrowser();
+  resolve(normal(7));
+  await assert.rejects(enabling, /cancelled/i);
+  assert.equal(scope.status().mode, 'browser');
+});

@@ -24,6 +24,14 @@ export class ScopeGrant {
       : { mode: this.#mode };
   }
 
+  async grantSelectedTab(selectTab) {
+    if (!this.#connected) throw new Error('Pair and connect to the bridge first');
+    const generation = this.#generation;
+    const tab = await selectTab();
+    if (!this.#connected || generation !== this.#generation) throw new Error('Enable control was cancelled');
+    return this.grantTab(tab);
+  }
+
   grantTab(tab) {
     if (!isControllableTab(tab)) throw new Error('This tab cannot be controlled');
     this.#mode = 'tab';

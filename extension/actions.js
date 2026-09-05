@@ -246,7 +246,7 @@ export class ActionExecutor {
       const result = await this.#cdp(current.id, 'Runtime.evaluate', { expression: snapshotExpression, returnByValue: true, awaitPromise: false }, generation);
       return result.result?.value;
     }
-    const resolved = await this.#cdp(current.id, 'Runtime.evaluate', { expression: selectorExpression(params.selector, method === 'type'), returnByValue: true, awaitPromise: false }, generation);
+    const resolved = await this.#cdp(current.id, 'Runtime.evaluate', { expression: selectorExpression(params.selector, method === 'type' ? 'focus' : 'point'), returnByValue: true, awaitPromise: false }, generation);
     const point = resolved.result?.value;
     if (!point || point.error) throw new Error(point?.error || 'Could not resolve selector');
     if (method === 'click') {

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { validateCommand, keyDefinition, ActionExecutor } from '../extension/actions.js';
 import { ScopeGrant } from '../extension/scope.js';
 
@@ -94,4 +95,38 @@ test('type resolves its selector and inserts text through bounded CDP commands',
   await executor.execute('type', { tabId: 5, selector: '#name', text: 'Ada' });
   assert.equal(calls[0][0], 'Runtime.evaluate');
   assert.deepEqual(calls.at(-1), ['Input.insertText', { text: 'Ada' }]);
+});
+
+test('typing focuses and selects the requested input before inserting text', async () => {
+  const scope = new ScopeGrant();
+  scope.grantTab(tab(5));
+  let focused;
+  let selected = false;
+  class Input {
+    getBoundingClientRect() { return { width: 30, height: 20, left: 0, top: 0 }; }
+    scrollIntoView() {}
+    focus() { focused = this; }
+    select() { selected = true; }
+  }
+  const target = new Input();
+  const executor = new ActionExecutor({
+    scope, tabs: { get: async () => tab(5) },
+    debuggerApi: {
+      attach: async () => {},
+      sendCommand: async (_target, method, params) => {
+        if (method === 'Runtime.evaluate') return { result: { value: vm.runInNewContext(params.expression, {
+          document: { querySelectorAll: () => [target] },
+          getComputedStyle: () => ({ visibility: 'visible', display: 'block' }),
+          HTMLInputElement: Input,
+          HTMLTextAreaElement: class {},
+        }) } };
+        if (method === 'Input.insertText') {
+          assert.equal(focused, target, 'text must go to the requested element');
+          assert.equal(selected, true, 'existing text must be replaced');
+        }
+        return {};
+      },
+    },
+  });
+  await executor.execute('type', { tabId: 5, selector: '#name', text: 'Ada' });
 });
