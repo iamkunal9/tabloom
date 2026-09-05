@@ -20,12 +20,12 @@ const tools = [
 ];
 
 export function createMcpServer({ command = defaultCommand } = {}) {
-  const server = new McpServer({ name: 'tabloom', version: '1.0.0' });
+  const server = new McpServer({ name: 'tabloom', version: '0.1.0' });
   for (const [method, schema, description] of tools) server.registerTool(`tabloom_${method}`, { description, inputSchema: schema }, async params => {
     try {
       const result = await command(method, params);
       if (method === 'screenshot') return { content: [{ type: 'image', mimeType: result.mimeType, data: result.data }] };
-      return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result && typeof result === 'object' ? result : undefined };
+      return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result && typeof result === 'object' && !Array.isArray(result) ? result : undefined };
     } catch (error) { return { isError: true, content: [{ type: 'text', text: JSON.stringify({ code: error.code || 'COMMAND_FAILED', message: error.message }) }] }; }
   });
   return server;

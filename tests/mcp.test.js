@@ -20,3 +20,14 @@ test('MCP exposes typed tools and converts screenshots to image content', async 
   assert.deepEqual(calls.at(-1), ['screenshot', { tabId: 7 }]);
   assert.deepEqual(result.content, [{ type: 'image', mimeType: 'image/png', data: 'aGVsbG8=' }]);
 });
+
+test('MCP tab arrays survive SDK result validation', async t => {
+  const tabs = [{ id: 7, title: 'Example', url: 'https://example.test/' }];
+  const server = createMcpServer({ command: async () => tabs });
+  const client = new Client({ name: 'test', version: '1.0.0' });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
+  t.after(async () => { await client.close(); await server.close(); });
+  const result = await client.callTool({ name: 'tabloom_tabs', arguments: {} });
+  assert.deepEqual(JSON.parse(result.content[0].text), tabs);
+});

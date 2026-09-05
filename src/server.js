@@ -6,6 +6,7 @@ import { validateCommand } from './validation.js';
 const MAX_PAYLOAD = 1_000_000;
 const errorBody = (code, message) => ({ ok: false, error: { code, message } });
 const safeToken = (actual, supplied) => {
+  if (typeof supplied !== 'string') return false;
   const a = Buffer.from(actual); const b = Buffer.from(supplied || '');
   return a.length === b.length && timingSafeEqual(a, b);
 };
@@ -15,7 +16,6 @@ export async function startServer({ port = 17653, token, commandTimeoutMs = 30_0
   let extension = null;
   let nextId = 1;
   let pendingCount = 0;
-  let tail = Promise.resolve();
   const pending = new Map();
 
   function failPending(code, message) {
@@ -23,12 +23,15 @@ export async function startServer({ port = 17653, token, commandTimeoutMs = 30_0
     pending.clear();
   }
   function drop(ws, code = 'EXTENSION_DISCONNECTED', message = 'Extension disconnected') {
-    if (extension === ws) extension = null;
+    if (extension !== ws) return;
+    extension = null;
     failPending(code, message);
   }
   function dispatch(method, params) {
     if (++pendingCount > maxPending) { pendingCount--; return Promise.reject(Object.assign(new Error('Too many pending commands'), { code: 'BUSY' })); }
-    const run = tail.then(() => new Promise((resolve, reject) => {
+    // The extension owns serialization and captures its grant at receipt.
+    // Holding work here would allow it to cross a Stop/re-enable boundary.
+    const run = new Promise((resolve, reject) => {
       const ws = extension;
       if (!ws || ws.readyState !== WebSocket.OPEN || !ws.authenticated) return reject(Object.assign(new Error('Extension is not connected'), { code: 'EXTENSION_DISCONNECTED' }));
       const id = String(nextId++);
@@ -44,8 +47,7 @@ export async function startServer({ port = 17653, token, commandTimeoutMs = 30_0
       ws.send(JSON.stringify({ type: 'command', id, method, params }), error => {
         if (error) { clearTimeout(timer); pending.delete(id); reject(Object.assign(error, { code: 'EXTENSION_DISCONNECTED' })); ws.terminate(); }
       });
-    }));
-    tail = run.catch(() => {});
+    });
     return run.finally(() => { pendingCount--; });
   }
 

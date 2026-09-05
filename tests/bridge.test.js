@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import WebSocket from 'ws';
 import { startServer } from '../src/server.js';
 
@@ -103,4 +105,41 @@ test('a missed heartbeat terminates the socket and fails pending work', async t 
   const pending = command(base, 'tabs');
   assert.equal(await new Promise(resolve => ws.once('close', resolve)), 1006);
   assert.equal((await (await pending).json()).error.code, 'EXTENSION_DISCONNECTED');
+});
+
+test('malformed hello tokens are rejected without crashing the bridge', async t => {
+  await promisify(execFile)(process.execPath, ['--input-type=module', '-e', `
+    import { startServer } from './src/server.js';
+    import WebSocket from 'ws';
+    const bridge = await startServer({ port: 0, token: '${token}' });
+    const ws = new WebSocket('ws://127.0.0.1:' + bridge.port + '/extension', { headers: { Origin: '${origin}' } });
+    await new Promise(resolve => ws.once('open', resolve));
+    ws.send(JSON.stringify({type:'hello',token:123}));
+    const code = await new Promise(resolve => ws.once('close', resolve));
+    if (code !== 1008) throw new Error('Expected authentication rejection');
+    if ((await fetch('http://127.0.0.1:' + bridge.port + '/health')).status !== 200) throw new Error('Bridge failed');
+    await bridge.close();
+  `], { timeout: 5000 });
+});
+
+test('commands reach the extension immediately so queued work captures its grant', async t => {
+  const { bridge, base } = await fixture({ commandTimeoutMs: 200 }); t.after(() => bridge.close());
+  const { ws } = await connectExtension(bridge.port); t.after(() => ws.close());
+  const received = [];
+  let secondReceived;
+  const both = new Promise(resolve => { secondReceived = resolve; });
+  ws.on('message', raw => {
+    const message = JSON.parse(raw);
+    if (message.type === 'ping') ws.send(JSON.stringify({ type: 'pong' }));
+    if (message.type === 'command') {
+      received.push(message);
+      if (received.length === 2) secondReceived();
+    }
+  });
+  const first = command(base, 'tabs');
+  const second = command(base, 'click', { tabId: 1, selector: '#buy' });
+  const reached = await Promise.race([both.then(() => true), delay(100).then(() => false)]);
+  if (reached) for (const message of received) ws.send(JSON.stringify({ type: 'result', id: message.id, ok: false, error: { code: 'REVOKED', message: 'Grant revoked' } }));
+  await Promise.all([first, second]);
+  assert.equal(reached, true, 'the bridge must not retain commands across extension grant changes');
 });
