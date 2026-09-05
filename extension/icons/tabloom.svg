@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tabloom">
+  <defs><linearGradient id="g" x1="8" y1="8" x2="56" y2="58" gradientUnits="userSpaceOnUse"><stop stop-color="#b892ff"/><stop offset="1" stop-color="#7042bd"/></linearGradient></defs>
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#21182f" stroke="#5f477f" stroke-width="2"/>
+  <path d="M18 22h28M18 32h19M18 42h12" fill="none" stroke="url(#g)" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="44" cy="42" r="7" fill="#6ce1a8"/>
+</svg>

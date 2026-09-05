@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Tabloom",
+  "version": "0.1.0",
+  "description": "User-approved local browser control for Tabloom.",
+  "permissions": ["alarms", "debugger", "storage", "tabs"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "action": { "default_popup": "popup.html", "default_title": "Tabloom" }
+}

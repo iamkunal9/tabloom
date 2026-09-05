@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Tabloom</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <header><img src="icons/tabloom.svg" alt=""><div><h1>Tabloom</h1><p>Local browser control</p></div><span id="badge">Off</span></header>
+    <section class="status" aria-label="Connection status">
+      <div><span>Pairing</span><strong id="paired">Not paired</strong></div>
+      <div><span>Bridge</span><strong id="connected">Disconnected</strong></div>
+      <div><span>Scope</span><strong id="scope">Off</strong></div>
+    </section>
+    <form id="pair-form">
+      <label>Bridge port<input id="port" name="port" type="number" min="1" max="65535" value="17653" required></label>
+      <label>Pairing token<input id="token" name="token" type="password" minlength="16" autocomplete="off" placeholder="Paste token from tabloom pair" required></label>
+      <p id="saved-token" class="hint"></p>
+      <button class="secondary" type="submit">Pair bridge</button>
+    </form>
+    <section class="controls">
+      <button id="current" type="button"><span>Current tab</span><small>Only the tab active when you enable control</small></button>
+      <button id="browser" type="button"><span>Full browser</span><small>Existing and future HTTP(S) tabs; allows open and close</small></button>
+      <button id="stop" class="danger" type="button">Stop all control</button>
+    </section>
+    <p id="error" role="alert" aria-live="polite"></p>
+  </main>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
