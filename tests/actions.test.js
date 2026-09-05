@@ -14,6 +14,7 @@ test('rejects unsupported commands and unexpected or invalid arguments', () => {
   assert.throws(() => validateCommand('scroll', { tabId: 1, x: Infinity }), /x/i);
   assert.throws(() => validateCommand('navigate', { tabId: 1, url: 'javascript:alert(1)' }), /HTTP/i);
   assert.throws(() => validateCommand('press', { tabId: 1, key: 'F12' }), /key/i);
+  assert.throws(() => validateCommand('upload', { tabId: 1, selector: '#file', path: '' }), /path/i);
   assert.throws(() => validateCommand('tabs', { tabId: 1 }), /unexpected/i);
 });
 
@@ -51,6 +52,25 @@ test('scroll uses a bounded page scroll command', async () => {
   assert.equal(calls[0][0], 'Runtime.evaluate');
   assert.equal(calls[0][1].returnByValue, true);
   assert.match(calls[0][1].expression, /scrollBy\(12, 34\)/);
+});
+
+test('upload targets a visible file input and sets only the requested file', async () => {
+  const scope = new ScopeGrant(); scope.grantTab(tab(1));
+  const calls = [];
+  const executor = new ActionExecutor({ scope, tabs: { get: async () => tab(1) }, debuggerApi: {
+    attach: async () => {},
+    sendCommand: async (_target, method, params) => {
+      calls.push([method, params]);
+      if (method === 'Page.getFrameTree') return frameTree('first');
+      if (method === 'Runtime.evaluate') return { result: { objectId: 'file-input' } };
+      return {};
+    },
+  } });
+  await executor.execute('upload', { tabId: 1, selector: '#file', path: 'C:\\Temp\\proof.mjs' });
+  assert.deepEqual(calls.filter(([method]) => method !== 'Page.getFrameTree').map(([method]) => method), [
+    'Runtime.evaluate', 'DOM.setFileInputFiles', 'Runtime.releaseObject',
+  ]);
+  assert.deepEqual(calls.find(([method]) => method === 'DOM.setFileInputFiles')[1], { objectId: 'file-input', files: ['C:\\Temp\\proof.mjs'] });
 });
 
 test('denies tab actions outside the active grant before debugger attachment', async () => {

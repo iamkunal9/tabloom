@@ -1,6 +1,6 @@
 import { isControllableTab } from './scope.js';
 
-const METHODS = new Set(['status', 'tabs', 'snapshot', 'click', 'type', 'press', 'scroll', 'navigate', 'screenshot', 'open', 'close']);
+const METHODS = new Set(['status', 'tabs', 'snapshot', 'click', 'type', 'press', 'scroll', 'upload', 'navigate', 'screenshot', 'open', 'close']);
 const KEYS = {
   Enter: { key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 },
   Tab: { key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9 },
@@ -63,6 +63,10 @@ export function validateCommand(method, rawParams = {}) {
     if (typeof params.text !== 'string' || params.text.length > 100_000) throw new Error('text must be a string up to 100000 characters');
     return { tabId: tabId(params.tabId), selector: text(params.selector, 'selector', 2048), text: params.text };
   }
+  if (method === 'upload') {
+    exact(params, ['tabId', 'selector', 'path']);
+    return { tabId: tabId(params.tabId), selector: text(params.selector, 'selector', 2048), path: text(params.path, 'path', 4096) };
+  }
   if (method === 'press') {
     exact(params, ['tabId', 'key']); return { tabId: tabId(params.tabId), key: keyDefinition(params.key).key };
   }
@@ -112,6 +116,27 @@ const selectorExpression = (selector, mode) => `(() => {
   }` : ''}
   const rect = element.getBoundingClientRect();
   return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+})()`;
+
+const fileInputExpression = selector => `(() => {
+  const selector = ${JSON.stringify(selector)};
+  let roots = [document];
+  let all = [];
+  try {
+    for (const [index, part] of selector.split(' >>> ').entries()) {
+      all = roots.flatMap(root => [...root.querySelectorAll(part)]);
+      if (index < selector.split(' >>> ').length - 1) roots = all.map(element => element.shadowRoot).filter(Boolean);
+    }
+  } catch { return { error: 'Invalid selector' }; }
+  const visible = all.filter(element => {
+    const rect = element.getBoundingClientRect();
+    const style = getComputedStyle(element);
+    return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+  });
+  if (visible.length !== 1) return { error: visible.length ? 'Selector is not unique' : 'No visible element matches selector' };
+  const element = visible[0];
+  if (!(element instanceof HTMLInputElement) || element.type !== 'file') return { error: 'Target is not a file input' };
+  return element;
 })()`;
 
 const snapshotExpression = `(() => {
@@ -275,6 +300,21 @@ export class ActionExecutor {
     if (method === 'scroll') {
       const expression = `window.scrollBy(${JSON.stringify(params.x)}, ${JSON.stringify(params.y)}); true`;
       await this.#cdp(current.id, 'Runtime.evaluate', { expression, returnByValue: true, awaitPromise: false }, generation);
+      return {};
+    }
+    if (method === 'upload') {
+      const document = await this.#document(current.id, generation);
+      const resolved = await this.#cdp(current.id, 'Runtime.evaluate', {
+        expression: fileInputExpression(params.selector), returnByValue: false, awaitPromise: false, objectGroup: 'tabloom-upload',
+      }, generation, document);
+      const value = resolved.result;
+      if (value?.value?.error) throw new Error(value.value.error);
+      if (!value?.objectId) throw new Error('Could not resolve file input');
+      try {
+        await this.#cdp(current.id, 'DOM.setFileInputFiles', { objectId: value.objectId, files: [params.path] }, generation, document);
+      } finally {
+        await this.#cdp(current.id, 'Runtime.releaseObject', { objectId: value.objectId }, generation, document).catch(() => {});
+      }
       return {};
     }
     if (method === 'press') {

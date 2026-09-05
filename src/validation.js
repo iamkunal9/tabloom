@@ -1,4 +1,4 @@
-const METHODS = new Set(['status', 'tabs', 'snapshot', 'click', 'type', 'press', 'scroll', 'navigate', 'screenshot', 'open', 'close']);
+const METHODS = new Set(['status', 'tabs', 'snapshot', 'click', 'type', 'press', 'scroll', 'upload', 'navigate', 'screenshot', 'open', 'close']);
 const KEYS = new Set(['Enter', 'Tab', 'Escape', 'Backspace', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
 const exact = (params, keys) => {
@@ -30,6 +30,7 @@ export function validateCommand(method, value = {}) {
   if (method === 'navigate') { exact(params, ['tabId', 'url']); return { tabId: id(params.tabId), url: url(params.url) }; }
   if (method === 'click') { exact(params, ['tabId', 'selector']); return { tabId: id(params.tabId), selector: string(params.selector, 'selector', 2048) }; }
   if (method === 'type') { exact(params, ['tabId', 'selector', 'text']); return { tabId: id(params.tabId), selector: string(params.selector, 'selector', 2048), text: string(params.text, 'text', 100000, true) }; }
+  if (method === 'upload') { exact(params, ['tabId', 'selector', 'path']); return { tabId: id(params.tabId), selector: string(params.selector, 'selector', 2048), path: string(params.path, 'path', 4096) }; }
   if (method === 'press') {
     exact(params, ['tabId', 'key']);
     if (!KEYS.has(params.key)) throw new Error('key is not supported');

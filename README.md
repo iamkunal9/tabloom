@@ -88,6 +88,7 @@ tabloom type '{"tabId":123,"selector":"#search","text":"extension APIs"}'
 tabloom click '{"tabId":123,"selector":"button[type=submit]"}'
 tabloom press '{"tabId":123,"key":"Enter"}'
 tabloom scroll '{"tabId":123,"y":600}'
+tabloom upload '{"tabId":123,"selector":"input[type=file]","path":"/tmp/proof.mjs"}'
 tabloom navigate '{"tabId":123,"url":"https://example.com"}'
 tabloom screenshot '{"tabId":123}'
 ```

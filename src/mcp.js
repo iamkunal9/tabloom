@@ -11,6 +11,7 @@ const tools = [
   ['snapshot', { tabId }, 'Read bounded page text and interactive elements.'],
   ['click', { tabId, selector: z.string().min(1).max(2048) }, 'Click one visible element.'],
   ['type', { tabId, selector: z.string().min(1).max(2048), text: z.string().max(100000) }, 'Replace text in one visible editable element.'],
+  ['upload', { tabId, selector: z.string().min(1).max(2048), path: z.string().min(1).max(4096) }, 'Set a local file on one visible file input.'],
   ['press', { tabId, key: z.enum(['Enter', 'Tab', 'Escape', 'Backspace', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']) }, 'Press a supported key.'],
   ['scroll', { tabId, x: z.number().finite().optional(), y: z.number().finite().optional() }, 'Scroll a tab by pixel deltas.'],
   ['navigate', { tabId, url: httpUrl }, 'Navigate a permitted tab to an HTTP(S) URL.'],
